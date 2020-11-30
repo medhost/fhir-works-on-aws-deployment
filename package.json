@@ -28,7 +28,8 @@
     "deploy": "aws cloudformation deploy --template-file $npm_package_cftemplate --stack-name $npm_package_stackname --capabilities CAPABILITY_IAM",
     "postdeploy": "aws cloudformation describe-stacks --stack-name $npm_package_stackname --query \"Stacks[?StackName=='$npm_package_stackname'].{StackName: StackName, Status: StackStatus, Reason: StackReason} | [0]\" --output json",
     "launch": "yarn run predeploy && yarn run deploy && yarn run postdeploy",
-    "local": "node ."
+    "local": "node .",
+    "serverless-start": "node ./node_modules/.bin/serverless offline -s dev --region=us-east-1"
   },
   "dependencies": {
     "fhir-works-on-aws-authz-rbac": "2.0.0",
