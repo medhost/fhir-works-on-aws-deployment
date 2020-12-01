@@ -10,6 +10,8 @@ import { fhirConfig, genericResources } from './config';
 const serverlessHandler = serverless(generateServerlessRouter(fhirConfig, genericResources), {
     request(request: any, event: any) {
         request.user = event.user;
+        request.tenantId = event.pathParameters.tenantId ? `-${event.pathParameters.tenantId}` : '';
+        request.proxy = event.pathParameters.proxy;
     },
 });
 
