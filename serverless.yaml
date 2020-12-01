@@ -155,6 +155,19 @@ functions:
           method: ANY
           path: '{proxy+}'
           private: true
+          -test
+      - http:
+      - authorizer:
+          type: COGNITO_USER_POOLS
+          authorizerId:
+            Ref: ApiGatewayAuthorizer
+          scopes: # must have both scopes
+            - 'openid'
+            - 'profile'
+            - 'aws.cognito.signin.user.admin'
+          method: ANY
+          path: '/tenant/{tenantId}/{proxy+}'
+          private: true
       - http:
           method: GET
           path: /metadata
@@ -362,7 +375,7 @@ resources:
             - !Join [
                 '',
                 [!Sub 'arn:${AWS::Partition}:cognito-idp:${AWS::Region}:${AWS::AccountId}:userpool/', !Ref UserPool],
-              ]
+            ]
       FHIRBinaryBucket:
         Type: AWS::S3::Bucket
         DeletionPolicy: Retain
@@ -498,7 +511,7 @@ resources:
         Description: Arn of Cloudwatch Execution log group for storing request/responses for auditing purposes
         Value:
           !Join [
-            '',
+              '',
             [
               !Sub 'arn:${AWS::Partition}:logs:${AWS::Region}:${AWS::AccountId}:log-group:API-Gateway-Execution-Logs_',
               !Ref ApiGatewayRestApi,
