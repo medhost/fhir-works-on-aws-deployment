@@ -80,7 +80,6 @@ Resources:
       IdentityPoolId: !Ref KibanaIdentityPool
       Roles:
         authenticated: !GetAtt AdminKibanaAccessRole.Arn
-
   ElasticSearchDomain:
     Type: AWS::Elasticsearch::Domain
     Properties:
@@ -93,8 +92,8 @@ Resources:
         InstanceType: !If [isDev, t3.medium.elasticsearch, m5.large.elasticsearch]
         InstanceCount: !If [isDev, 1, 4]
         DedicatedMasterEnabled: !If [isDev, false, true]
-        DedicatedMasterCount: !If [isDev, !Ref 'AWS::NoValue', 3]
-        DedicatedMasterType: !If [isDev, !Ref 'AWS::NoValue', c5.large.elasticsearch]
+        DedicatedMasterCount: !If [isDev, !Ref AWS::NoValue, 3]
+        DedicatedMasterType: !If [isDev, !Ref AWS::NoValue, c5.large.elasticsearch]
         ZoneAwarenessEnabled: !If [isDev, false, true]
       ElasticsearchVersion: '7.4'
       EncryptionAtRestOptions:
@@ -102,7 +101,7 @@ Resources:
         KmsKeyId: !Ref ElasticSearchKMSKey
       NodeToNodeEncryptionOptions:
         Enabled: true
-      SnapshotOptions: !If [isDev, !Ref 'AWS::NoValue', { AutomatedSnapshotStartHour: 0 }]
+      SnapshotOptions: !If [isDev, !Ref AWS::NoValue, { AutomatedSnapshotStartHour: 0 }]
       CognitoOptions: !If
         - isDev
         - Enabled: true
@@ -112,7 +111,7 @@ Resources:
             - ${self:custom.config.kibana.userPoolId}
             - !Ref KibanaUserPool
           RoleArn: !GetAtt KibanaCognitoRole.Arn
-        - Ref: AWS::NoValue
+        - !Ref AWS::NoValue
       AccessPolicies: !If
         - isDev
         - Version: '2012-10-17'
