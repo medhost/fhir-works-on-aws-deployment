@@ -440,6 +440,13 @@ resources:
                       - 'states:StartExecution'
                     Resource:
                       - !Ref BulkExportStateMachine
+                  - Effect: Allow
+                    Action: !If
+                      - isVpcEnabled
+                      - ${self:custom.config.vpc.lambdaRoleVpcPermissions}
+                      - !Ref AWS::NoValue
+                    Resource:
+                      - '*'
       DdbToEsLambdaRole:
         Type: AWS::IAM::Role
         Properties:
@@ -483,7 +490,7 @@ resources:
                   - Effect: Allow
                     Action: !If
                       - isVpcEnabled
-                      - ${self:custom.config.vpc.ddbToEsLambdaRoleVpcPermissions}
+                      - ${self:custom.config.vpc.lambdaRoleVpcPermissions}
                       - !Ref AWS::NoValue
                     Resource:
                       - '*'
