@@ -103,6 +103,7 @@ functions:
     provisionedConcurrency: 5
     environment:
       EXPORT_STATE_MACHINE_ARN: !Ref BulkExportStateMachine
+    vpc: ${self:custom.config.vpc.${self:custom.stage}}
 
   ddbToEs:
     timeout: 300
@@ -117,6 +118,7 @@ functions:
           batchSize: 100
           maximumRetryAttempts: 3
           startingPosition: LATEST
+    vpc: ${self:custom.config.vpc.${self:custom.stage}}
 
   startExportJob:
     timeout: 30
@@ -174,6 +176,18 @@ stepFunctions:
 resources:
   - Description: (SO0128) - Solution - Primary Template - This template creates all the necessary resources to deploy FHIR Works on AWS; a framework to deploy a FHIR server on AWS.
   - Parameters:
+      IsDev:
+        Type: String
+        Default: ${self:custom.config.isDevEnvironment}
+        Description: 'Sets config for dev environment if true - (true or false)'
+      UseExistingKibanaUserPool:
+        Type: String
+        Default: ${self:custom.config.kibana.useExistingUserPool}
+        Description: 'Configure existing or new Kibana cognito user pool if true - (true or false)'
+      IsVpcEnabled:
+        Type: String
+        Default: ${self:custom.config.vpc.enabled}
+        Description: 'turn on VPC for ES and relevant lambdas if true - (true or false)'
       Stage:
         Type: String
         Default: ${self:custom.stage}
@@ -194,8 +208,13 @@ resources:
         Default: 5
         Description: Number of Glue workers to use during an Export job.
   - Conditions:
-      isDev: !Equals [!Ref Stage, 'dev']
+      isDev: !Equals [!Ref IsDev, true]
       isNotDev: !Not [Condition: isDev]
+      kibanaUserPoolExists: !Equals [!Ref UseExistingKibanaUserPool, true]
+      isVpcEnabled: !Equals [!Ref IsVpcEnabled, true]
+      createNewKibanaUserPool: !And
+        - Condition: isDev
+        - !Not [Condition: kibanaUserPoolExists]
   - Resources:
       ResourceDynamoDBTableV2:
         Type: AWS::DynamoDB::Table
@@ -461,6 +480,13 @@ resources:
                       - 'es:ESHttp*'
                     Resource:
                       - !Join ['', [!GetAtt ElasticSearchDomain.Arn, '/*']]
+                  - Effect: Allow
+                    Action: !If
+                      - isVpcEnabled
+                      - ${self:custom.config.vpc.ddbToEsLambdaRoleVpcPermissions}
+                      - !Ref AWS::NoValue
+                    Resource:
+                      - '*'
             - PolicyName: 'KMSPolicy'
               PolicyDocument:
                 Version: '2012-10-17'
@@ -503,9 +529,12 @@ resources:
       ElasticSearchKibanaUserPoolId:
         Condition: isDev
         Description: User pool id for the provisioning ES Kibana users.
-        Value: !Ref KibanaUserPool
+        Value: !If
+          - kibanaUserPoolExists
+          - ${self:custom.config.kibana.userPoolId}
+          - !Ref KibanaUserPool
       ElasticSearchKibanaUserPoolAppClientId:
-        Condition: isDev
+        Condition: createNewKibanaUserPool
         Description: App client id for the provisioning ES Kibana users.
         Value: !Ref KibanaUserPoolClient
       CloudwatchExecutionLogGroup:

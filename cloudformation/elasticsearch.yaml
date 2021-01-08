@@ -6,7 +6,7 @@
 Resources:
   KibanaUserPool:
     Type: AWS::Cognito::UserPool
-    Condition: isDev
+    Condition: createNewKibanaUserPool
     Properties:
       AutoVerifiedAttributes:
         - email
@@ -19,13 +19,13 @@ Resources:
           Name: cc_confirmed
   KibanaUserPoolDomain:
     Type: AWS::Cognito::UserPoolDomain
-    Condition: isDev
+    Condition: createNewKibanaUserPool
     Properties:
       UserPoolId: !Ref KibanaUserPool
       Domain: !Join ['-', [kibana, !Ref Stage, !Ref AWS::AccountId]]
   KibanaUserPoolClient:
     Type: AWS::Cognito::UserPoolClient
-    Condition: isDev
+    Condition: createNewKibanaUserPool
     Properties:
       ClientName: !Sub '${AWS::StackName}-KibanaClient'
       GenerateSecret: false
@@ -40,14 +40,11 @@ Resources:
     Properties:
       IdentityPoolName: !Sub '${AWS::StackName}-KibanaIDPool'
       AllowUnauthenticatedIdentities: false
-      CognitoIdentityProviders:
-        - ClientId: !Ref KibanaUserPoolClient
-          ProviderName: !GetAtt KibanaUserPool.ProviderName
   KibanaCognitoRole:
     Type: AWS::IAM::Role
     Condition: isDev
     Properties:
-      RoleName: !Join ['-', ['kibana-cognito-role', !Ref AWS::Region]]
+      RoleName: !Join ['-', [!Ref Stage, 'kibana-cognito-role', !Ref AWS::Region]]
       ManagedPolicyArns:
         - !Sub 'arn:${AWS::Partition}:iam::aws:policy/AmazonESCognitoAccess'
       AssumeRolePolicyDocument:
@@ -62,7 +59,7 @@ Resources:
     Type: 'AWS::IAM::Role'
     Condition: isDev
     Properties:
-      RoleName: !Join ['-', ['admin-kibana-access-role', !Ref AWS::Region]]
+      RoleName: !Join ['-', [!Ref Stage, 'admin-kibana-access-role', !Ref AWS::Region]]
       AssumeRolePolicyDocument:
         Version: '2012-10-17'
         Statement:
@@ -86,6 +83,7 @@ Resources:
   ElasticSearchDomain:
     Type: AWS::Elasticsearch::Domain
     Properties:
+      DomainName: !Join [ '-', [ !Ref Stage, 'fhir' ] ]
       EBSOptions: # Assuming ~100GB storage requirement for PROD; min storage requirement is ~290GB https://docs.aws.amazon.com/elasticsearch-service/latest/developerguide/sizing-domains.html
         EBSEnabled: true
         VolumeType: gp2
@@ -108,7 +106,10 @@ Resources:
         - isDev
         - Enabled: true
           IdentityPoolId: !Ref KibanaIdentityPool
-          UserPoolId: !Ref KibanaUserPool
+          UserPoolId: !If
+            - kibanaUserPoolExists
+            - ${self:custom.config.kibana.userPoolId}
+            - !Ref KibanaUserPool
           RoleArn: !GetAtt KibanaCognitoRole.Arn
         - !Ref AWS::NoValue
       AccessPolicies: !If
@@ -136,4 +137,9 @@ Resources:
               Action: es:*
               Resource:
                 Fn::Sub: arn:${AWS::Partition}:es:${AWS::Region}:${AWS::AccountId}:domain/*
+        - !Ref AWS::NoValue
+      VPCOptions: !If
+        - isVpcEnabled
+        - SecurityGroupIds: ${self:custom.config.vpc.${self:custom.stage}.securityGroupIds}
+          SubnetIds: ${self:custom.config.vpc.${self:custom.stage}.subnetIds}
         - !Ref AWS::NoValue
