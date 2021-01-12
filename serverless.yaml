@@ -227,12 +227,21 @@ resources:
               AttributeType: S
             - AttributeName: vid
               AttributeType: N
+            - AttributeName: externalId
+              AttributeType: S
           KeySchema:
             - AttributeName: id
               KeyType: HASH
             - AttributeName: vid
               KeyType: RANGE
           BillingMode: PAY_PER_REQUEST
+          GlobalSecondaryIndexes:
+            - IndexName: resource_externalId_index
+              KeySchema:
+                - AttributeName: externalId
+                  KeyType: S
+              Projection:
+                ProjectionType: 'ALL'
           StreamSpecification:
             StreamViewType: NEW_AND_OLD_IMAGES
           SSESpecification:
