@@ -38,6 +38,7 @@
     "cors": "^2.8.5",
     "errorhandler": "^1.5.1",
     "mime-types": "^2.1.26",
+    "ajv": "^6.11.0",
     "fhir-works-on-aws-authz-rbac": "4.0.0",
     "fhir-works-on-aws-interface": "4.0.0",
     "fhir-works-on-aws-persistence-ddb": "3.0.0",
