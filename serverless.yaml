@@ -55,6 +55,7 @@ provider:
   tracing:
     apiGateway: true
     lambda: true
+  vpc: ${self:custom.config.vpc.${self:custom.stage}}
 
 functions:
   fhirServer:
@@ -103,7 +104,6 @@ functions:
     provisionedConcurrency: 5
     environment:
       EXPORT_STATE_MACHINE_ARN: !Ref BulkExportStateMachine
-    vpc: ${self:custom.config.vpc.${self:custom.stage}}
 
   ddbToEs:
     timeout: 300
@@ -118,7 +118,6 @@ functions:
           batchSize: 100
           maximumRetryAttempts: 3
           startingPosition: LATEST
-    vpc: ${self:custom.config.vpc.${self:custom.stage}}
 
   startExportJob:
     timeout: 30
