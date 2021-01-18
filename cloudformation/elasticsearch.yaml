@@ -138,8 +138,8 @@ Resources:
               Resource:
                 Fn::Sub: arn:${AWS::Partition}:es:${AWS::Region}:${AWS::AccountId}:domain/*
         - !Ref AWS::NoValue
-#      VPCOptions: !If
-#        - isVpcEnabled
-#        - SecurityGroupIds: ${self:custom.config.vpc.${self:custom.stage}.securityGroupIds}
-#          SubnetIds: ${self:custom.config.vpc.${self:custom.stage}.subnetIds}
-#        - !Ref AWS::NoValue
+      VPCOptions: !If
+        - isVpcEnabled
+        - SecurityGroupIds: ${self:custom.config.vpc.${self:custom.stage}.securityGroupIds}
+          SubnetIds: ${self:custom.config.vpc.${self:custom.stage}.subnetIds}
+        - !Ref AWS::NoValue

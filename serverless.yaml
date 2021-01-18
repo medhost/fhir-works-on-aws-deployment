@@ -396,7 +396,7 @@ resources:
                     - 'dynamodb:DeleteItem'
                     - 'dynamodb:BatchWriteItem'
                     Resource:
-                      - !GetAtt ResourceDynamoDBTableV2.Arn
+                      - !Join ['', [!GetAtt ResourceDynamoDBTableV2.Arn, '*']]
                       - !GetAtt ExportRequestDynamoDBTable.Arn
                   - Effect: Allow
                     Action:
@@ -510,6 +510,32 @@ resources:
                     Resource:
                       - !GetAtt DynamodbKMSKey.Arn
                       - !GetAtt ElasticSearchKMSKey.Arn
+      FHIRBinaryBucketAccessPoint:
+        Type: AWS::S3::AccessPoint
+        Properties:
+          Bucket: !Ref FHIRBinaryBucket
+          Name: '${self:custom.stage}-fhir-binary-bucket-access-point'
+          NetworkOrigin: 'VPC'
+          PublicAccessBlockConfiguration:
+            BlockPublicAcls: 'true'
+            BlockPublicPolicy: 'true'
+            IgnorePublicAcls: 'true'
+            RestrictPublicBuckets: 'true'
+          VpcConfiguration:
+            VpcId: '${self:custom.config.vpc.id}'
+      FHIRLogsBucketAccessPoint:
+        Type: AWS::S3::AccessPoint
+        Properties:
+          Bucket: !Ref FHIRLogsBucket
+          Name: '${self:custom.stage}-fhir-logs-bucket-access-point'
+          NetworkOrigin: 'VPC'
+          PublicAccessBlockConfiguration:
+            BlockPublicAcls: 'true'
+            BlockPublicPolicy: 'true'
+            IgnorePublicAcls: 'true'
+            RestrictPublicBuckets: 'true'
+          VpcConfiguration:
+            VpcId: '${self:custom.config.vpc.id}'
   - ${file(cloudformation/alarms.yaml)}
   - ${file(cloudformation/kms.yaml)}
   - ${file(cloudformation/elasticsearch.yaml)}
