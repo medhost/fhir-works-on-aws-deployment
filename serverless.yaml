@@ -536,6 +536,22 @@ resources:
             RestrictPublicBuckets: 'true'
           VpcConfiguration:
             VpcId: '${self:custom.config.vpc.id}'
+      ResourceDynamoDBTableVPCEndpoint:
+        Type: AWS::EC2::VPCEndpoint
+        Properties:
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: 'Allow'
+                Principal:
+                  Service:
+                    - lambda.amazonaws.com
+                Action:
+                  - 'dynamodb:*'
+                Resource:
+                  - !Join ['',[!GetAtt ResourceDynamoDBTableV2.Arn, '*']]
+          ServiceName: !Sub 'com.amazonaws.${self:custom.region}.dynamodb'
+          VpcId: ${self:custom.config.vpc.id}
   - ${file(cloudformation/alarms.yaml)}
   - ${file(cloudformation/kms.yaml)}
   - ${file(cloudformation/elasticsearch.yaml)}
