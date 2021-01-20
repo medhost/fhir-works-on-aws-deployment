@@ -55,6 +55,7 @@ provider:
   tracing:
     apiGateway: true
     lambda: true
+  vpc: ${self:custom.config.vpc.${self:custom.stage}}
 
 functions:
   fhirServer:
@@ -106,7 +107,6 @@ functions:
     provisionedConcurrency: 5
     environment:
       EXPORT_STATE_MACHINE_ARN: !Ref BulkExportStateMachine
-    vpc: ${self:custom.config.vpc.${self:custom.stage}}
 
   ddbToEs:
     timeout: 300
@@ -121,7 +121,6 @@ functions:
           batchSize: 100
           maximumRetryAttempts: 3
           startingPosition: LATEST
-    vpc: ${self:custom.config.vpc.${self:custom.stage}}
 
   startExportJob:
     timeout: 30
@@ -400,7 +399,7 @@ resources:
                     - 'dynamodb:DeleteItem'
                     - 'dynamodb:BatchWriteItem'
                     Resource:
-                      - !GetAtt ResourceDynamoDBTableV2.Arn
+                      - !Join ['', [!GetAtt ResourceDynamoDBTableV2.Arn, '*']]
                       - !GetAtt ExportRequestDynamoDBTable.Arn
                   - Effect: Allow
                     Action:
@@ -514,6 +513,48 @@ resources:
                     Resource:
                       - !GetAtt DynamodbKMSKey.Arn
                       - !GetAtt ElasticSearchKMSKey.Arn
+      FHIRBinaryBucketAccessPoint:
+        Type: AWS::S3::AccessPoint
+        Properties:
+          Bucket: !Ref FHIRBinaryBucket
+          Name: '${self:custom.stage}-fhir-binary-bucket-access-point'
+          NetworkOrigin: 'VPC'
+          PublicAccessBlockConfiguration:
+            BlockPublicAcls: 'true'
+            BlockPublicPolicy: 'true'
+            IgnorePublicAcls: 'true'
+            RestrictPublicBuckets: 'true'
+          VpcConfiguration:
+            VpcId: '${self:custom.config.vpc.id}'
+      FHIRLogsBucketAccessPoint:
+        Type: AWS::S3::AccessPoint
+        Properties:
+          Bucket: !Ref FHIRLogsBucket
+          Name: '${self:custom.stage}-fhir-logs-bucket-access-point'
+          NetworkOrigin: 'VPC'
+          PublicAccessBlockConfiguration:
+            BlockPublicAcls: 'true'
+            BlockPublicPolicy: 'true'
+            IgnorePublicAcls: 'true'
+            RestrictPublicBuckets: 'true'
+          VpcConfiguration:
+            VpcId: '${self:custom.config.vpc.id}'
+      ResourceDynamoDBTableVPCEndpoint:
+        Type: AWS::EC2::VPCEndpoint
+        Properties:
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: 'Allow'
+                Principal:
+                  Service:
+                    - lambda.amazonaws.com
+                Action:
+                  - 'dynamodb:*'
+                Resource:
+                  - !Join ['',[!GetAtt ResourceDynamoDBTableV2.Arn, '*']]
+          ServiceName: !Sub 'com.amazonaws.${self:custom.region}.dynamodb'
+          VpcId: ${self:custom.config.vpc.id}
   - ${file(cloudformation/alarms.yaml)}
   - ${file(cloudformation/kms.yaml)}
   - ${file(cloudformation/elasticsearch.yaml)}
