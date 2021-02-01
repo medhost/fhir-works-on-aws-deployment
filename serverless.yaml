@@ -234,7 +234,8 @@ resources:
               KeyType: HASH
             - AttributeName: vid
               KeyType: RANGE
-          BillingMode: PAY_PER_REQUEST
+          BillingMode: ${PAY_PER_REQUEST, self:custom.config.dynamodb.BillingMode}
+          ProvisionedThroughput: ${self:custom.config.dynamodb.ProvisionedThroughput}
           StreamSpecification:
             StreamViewType: NEW_AND_OLD_IMAGES
           SSESpecification:
@@ -266,7 +267,8 @@ resources:
             KMSMasterKeyId: !Ref DynamodbKMSKey
             SSEEnabled: true
             SSEType: 'KMS'
-          BillingMode: PAY_PER_REQUEST
+          BillingMode: ${PAY_PER_REQUEST, self:custom.config.dynamodb.BillingMode}
+          ProvisionedThroughput: ${self:custom.config.dynamodb.ProvisionedThroughput}
           GlobalSecondaryIndexes:
             - IndexName: '${self:custom.exportRequestTableJobStatusIndex}'
               KeySchema:
@@ -297,7 +299,8 @@ resources:
               KeyType: HASH
             - AttributeName: vid
               KeyType: RANGE
-          BillingMode: PAY_PER_REQUEST
+          BillingMode: ${PAY_PER_REQUEST, self:custom.config.dynamodb.BillingMode}
+          ProvisionedThroughput: ${self:custom.config.dynamodb.ProvisionedThroughput}
           SSESpecification:
             KMSMasterKeyId: !Ref DynamodbKMSKey
             SSEEnabled: true
@@ -560,6 +563,7 @@ resources:
   - ${file(cloudformation/elasticsearch.yaml)}
   - ${file(cloudformation/cognito.yaml)}
   - ${file(cloudformation/bulkExport.yaml)}
+  - ${file(cloudformation/dynamodbScaling.yaml)}
   - Outputs:
       UserPoolId:
         Description: User pool id for the provisioning users.

@@ -1,0 +1,80 @@
+Resources:
+  # We will need a read / write scalable target for each tenant table. This could get messy.
+  WriteCapacityScalableTarget:
+    Type: AWS::ApplicationAutoScaling::ScalableTarget
+    Properties:
+      # TODO find a real value for production here, just testing at the moment
+      MaxCapacity: 10
+      MinCapacity: 1
+      ResourceId: !Join
+        - /
+        - - table
+          - !Ref ResourceDynamoDBTableV2
+      RoleARN: !GetAtt ScalingRole.Arn
+      ScalableDimension: dynamodb:table:WriteCapacityUnits
+      ServiceNamespace: dynamodb
+  ReadCapacityScalableTarget:
+    Type: AWS::ApplicationAutoScaling::ScalableTarget
+    Properties:
+      # TODO find a real value for production here, just testing at the moment
+      MaxCapacity: 10
+      MinCapacity: 1
+      ResourceId: !Join
+        - /
+        - - table
+          - !Ref ResourceDynamoDBTableV2
+      RoleARN: !GetAtt ScalingRole.Arn
+      ScalableDimension: dynamodb:table:ReadCapacityUnits
+      ServiceNamespace: dynamodb
+  ScalingRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: "Allow"
+            Principal:
+              Service:
+                - application-autoscaling.amazonaws.com
+            Action:
+              - "sts:AssumeRole"
+      Path: "/"
+      Policies:
+        - PolicyName: "root"
+          PolicyDocument:
+            Version: "2012-10-17"
+            Statement:
+              - Effect: "Allow"
+                Action:
+                  - "dynamodb:DescribeTable"
+                  - "dynamodb:UpdateTable"
+                  - "cloudwatch:PutMetricAlarm"
+                  - "cloudwatch:DescribeAlarms"
+                  - "cloudwatch:GetMetricStatistics"
+                  - "cloudwatch:SetAlarmState"
+                  - "cloudwatch:DeleteAlarms"
+                Resource: "*"
+  WriteScalingPolicy:
+    Type: AWS::ApplicationAutoScaling::ScalingPolicy
+    Properties:
+      PolicyName: WriteAutoScalingPolicy
+      PolicyType: TargetTrackingScaling
+      ScalingTargetId: !Ref WriteCapacityScalableTarget
+      TargetTrackingScalingPolicyConfiguration:
+        TargetValue: 70.0
+        ScaleInCooldown: 60
+        ScaleOutCooldown: 60
+        PredefinedMetricSpecification:
+          PredefinedMetricType: DynamoDBWriteCapacityUtilization
+    ReadScalingPolicy:
+      Type: AWS::ApplicationAutoScaling::ScalingPolicy
+      Properties:
+        PolicyName: ReadAutoScalingPolicy
+        PolicyType: TargetTrackingScaling
+        ScalingTargetId: !Ref ReadCapacityScalableTarget
+        TargetTrackingScalingPolicyConfiguration:
+          TargetValue: 70.0
+          ScaleInCooldown: 60
+          ScaleOutCooldown: 60
+          PredefinedMetricSpecification:
+            PredefinedMetricType: DynamoDBWriteCapacityUtilization
