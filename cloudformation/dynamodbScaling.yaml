@@ -66,15 +66,15 @@ Resources:
         ScaleOutCooldown: 60
         PredefinedMetricSpecification:
           PredefinedMetricType: DynamoDBWriteCapacityUtilization
-    ReadScalingPolicy:
-      Type: AWS::ApplicationAutoScaling::ScalingPolicy
-      Properties:
-        PolicyName: ReadAutoScalingPolicy
-        PolicyType: TargetTrackingScaling
-        ScalingTargetId: !Ref ReadCapacityScalableTarget
-        TargetTrackingScalingPolicyConfiguration:
-          TargetValue: 70.0
-          ScaleInCooldown: 60
-          ScaleOutCooldown: 60
-          PredefinedMetricSpecification:
-            PredefinedMetricType: DynamoDBWriteCapacityUtilization
+  ReadScalingPolicy:
+    Type: AWS::ApplicationAutoScaling::ScalingPolicy
+    Properties:
+      PolicyName: ReadAutoScalingPolicy
+      PolicyType: TargetTrackingScaling
+      ScalingTargetId: !Ref ReadCapacityScalableTarget
+      TargetTrackingScalingPolicyConfiguration:
+        TargetValue: 70.0
+        ScaleInCooldown: 60
+        ScaleOutCooldown: 60
+        PredefinedMetricSpecification:
+          PredefinedMetricType: DynamoDBWriteCapacityUtilization
