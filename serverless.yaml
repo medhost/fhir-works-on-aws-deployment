@@ -278,6 +278,7 @@ resources:
                   KeyType: RANGE
               Projection:
                 ProjectionType: KEYS_ONLY
+              ProvisionedThroughput: ${self:custom.config.dynamodb.ProvisionedThroughput}
           Tags: !If
             - isNotDev
             - - Key: 'service'
