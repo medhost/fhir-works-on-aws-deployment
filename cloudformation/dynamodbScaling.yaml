@@ -77,4 +77,4 @@ Resources:
         ScaleInCooldown: 60
         ScaleOutCooldown: 60
         PredefinedMetricSpecification:
-          PredefinedMetricType: DynamoDBWriteCapacityUtilization
+          PredefinedMetricType: DynamoDBReadCapacityUtilization
