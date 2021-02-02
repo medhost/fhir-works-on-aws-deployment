@@ -12,8 +12,8 @@ Resources:
   DDBV2ReadCapacityScalableTarget:
     Type: AWS::ApplicationAutoScaling::ScalableTarget
     Properties:
-      MaxCapacity: 5
-      MinCapacity: 3
+      MaxCapacity: ${self:custom.config.dynamodb.scaling.max}
+      MinCapacity: ${self:custom.config.dynamodb.scaling.min}
       ResourceId: !Join ['/', ['table', !Ref ResourceDynamoDBTableV2]]
       RoleARN: !GetAtt ScalingRole.Arn
       ScalableDimension: dynamodb:table:ReadCapacityUnits
@@ -54,8 +54,8 @@ Resources:
     ExportDDBReadCapacityScalableTarget:
       Type: AWS::ApplicationAutoScaling::ScalableTarget
       Properties:
-        MaxCapacity: 5
-        MinCapacity: 3
+        MaxCapacity: ${self:custom.config.dynamodb.scaling.min}
+        MinCapacity: ${self:custom.config.dynamodb.scaling.min}
         ResourceId: !Join [ '/', [ 'table', !Ref ExportRequestDynamoDBTable ] ]
         RoleARN: !GetAtt ScalingRole.Arn
         ScalableDimension: dynamodb:table:ReadCapacityUnits
