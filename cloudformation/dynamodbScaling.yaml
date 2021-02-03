@@ -3,14 +3,14 @@ Resources:
   - isNotDev
     # TODO Use javascript to generate this file since it will grow according to tenant list size.
   - DDBV2WriteCapacityScalableTarget:
-    Type: AWS::ApplicationAutoScaling::ScalableTarget
-    Properties:
-      MaxCapacity: ${self:custom.config.dynamodb.scaling.max}
-      MinCapacity: ${self:custom.config.dynamodb.scaling.min}
-      ResourceId: !Join ['/', ['table', !Ref ResourceDynamoDBTableV2]]
-      RoleARN: !GetAtt ScalingRole.Arn
-      ScalableDimension: dynamodb:table:WriteCapacityUnits
-      ServiceNamespace: dynamodb
+      Type: AWS::ApplicationAutoScaling::ScalableTarget
+      Properties:
+        MaxCapacity: ${self:custom.config.dynamodb.scaling.max}
+        MinCapacity: ${self:custom.config.dynamodb.scaling.min}
+        ResourceId: !Join ['/', ['table', !Ref ResourceDynamoDBTableV2]]
+        RoleARN: !GetAtt ScalingRole.Arn
+        ScalableDimension: dynamodb:table:WriteCapacityUnits
+        ServiceNamespace: dynamodb
     DDBV2ReadCapacityScalableTarget:
       Type: AWS::ApplicationAutoScaling::ScalableTarget
       Properties:
