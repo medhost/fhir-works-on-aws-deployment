@@ -563,7 +563,10 @@ resources:
   - ${file(cloudformation/elasticsearch.yaml)}
   - ${file(cloudformation/cognito.yaml)}
   - ${file(cloudformation/bulkExport.yaml)}
-  - ${file(cloudformation/dynamodbScaling.yaml)}
+  - !If
+    - isNotDev
+    - ${file(cloudformation/dynamodbScaling.yaml)}
+    - !Ref AWS::NoValue
   - Outputs:
       UserPoolId:
         Description: User pool id for the provisioning users.
