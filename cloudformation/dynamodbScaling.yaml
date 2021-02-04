@@ -54,7 +54,7 @@ Resources:
   ExportDDBReadCapacityScalableTarget:
     Type: AWS::ApplicationAutoScaling::ScalableTarget
     Properties:
-      MaxCapacity: ${self:custom.config.dynamodb.scaling.min}
+      MaxCapacity: ${self:custom.config.dynamodb.scaling.max}
       MinCapacity: ${self:custom.config.dynamodb.scaling.min}
       ResourceId: !Join [ '/', [ 'table', !Ref ExportRequestDynamoDBTable ] ]
       RoleARN: !GetAtt ScalingRole.Arn
