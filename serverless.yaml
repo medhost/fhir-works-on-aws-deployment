@@ -235,8 +235,8 @@ resources:
               KeyType: HASH
             - AttributeName: vid
               KeyType: RANGE
-          BillingMode: ${PAY_PER_REQUEST, self:custom.config.dynamodb.BillingMode}
-          ProvisionedThroughput: ${self:custom.config.dynamodb.ProvisionedThroughput}
+          BillingMode: ${PAY_PER_REQUEST, self:custom.config.dynamodb.billingMode}
+          ProvisionedThroughput: ${self:custom.config.dynamodb.provisionedThroughput}
           StreamSpecification:
             StreamViewType: NEW_AND_OLD_IMAGES
           SSESpecification:
