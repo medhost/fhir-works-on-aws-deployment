@@ -268,8 +268,8 @@ resources:
             KMSMasterKeyId: !Ref DynamodbKMSKey
             SSEEnabled: true
             SSEType: 'KMS'
-          BillingMode: ${PAY_PER_REQUEST, self:custom.config.dynamodb.BillingMode}
-          ProvisionedThroughput: ${self:custom.config.dynamodb.ProvisionedThroughput}
+          BillingMode: ${PAY_PER_REQUEST, self:custom.config.dynamodb.billingMode}
+          ProvisionedThroughput: ${self:custom.config.dynamodb.provisionedThroughput}
           GlobalSecondaryIndexes:
             - IndexName: '${self:custom.exportRequestTableJobStatusIndex}'
               KeySchema:
@@ -279,7 +279,7 @@ resources:
                   KeyType: RANGE
               Projection:
                 ProjectionType: KEYS_ONLY
-              ProvisionedThroughput: ${self:custom.config.dynamodb.ProvisionedThroughput}
+              ProvisionedThroughput: ${self:custom.config.dynamodb.provisionedThroughput}
           Tags: !If
             - isNotDev
             - - Key: 'service'
