@@ -17,7 +17,7 @@ custom:
   stage: ${opt:stage, self:provider.stage}
   region: ${opt:region, self:provider.region}
   oauthRedirect: ${opt:oauthRedirect, 'http://localhost'}
-  config: ${file(serverless_config.json)}
+  config: ${ssm:/aws/reference/secretsmanager/fhir-works-${self:custom.stage}~true, file(serverless_config.json)}
 
 provider:
   name: aws
@@ -56,7 +56,7 @@ provider:
   tracing:
     apiGateway: true
     lambda: true
-  vpc: ${self:custom.config.vpc.${self:custom.stage}}
+  vpc: ${self:custom.config.vpc.config}
 
 functions:
   fhirServer:
@@ -105,7 +105,7 @@ functions:
           method: GET
           path: '/tenant/{tenantId}/metadata'
     handler: src/index.default
-    provisionedConcurrency: 5
+    provisionedConcurrency: ${self:custom.config.lambda.provisionedConcurrency}
     environment:
       EXPORT_STATE_MACHINE_ARN: !Ref BulkExportStateMachine
 
@@ -449,7 +449,11 @@ resources:
                   - Effect: Allow
                     Action: !If
                       - isVpcEnabled
-                      - ${self:custom.config.vpc.lambdaRoleVpcPermissions}
+                      - - ec2:DescribeInstances
+                        - ec2:CreateNetworkInterface
+                        - ec2:AttachNetworkInterface
+                        - ec2:DescribeNetworkInterfaces
+                        - ec2:DeleteNetworkInterface
                       - !Ref AWS::NoValue
                     Resource:
                       - '*'
@@ -496,7 +500,11 @@ resources:
                   - Effect: Allow
                     Action: !If
                       - isVpcEnabled
-                      - ${self:custom.config.vpc.lambdaRoleVpcPermissions}
+                      - - ec2:DescribeInstances
+                        - ec2:CreateNetworkInterface
+                        - ec2:AttachNetworkInterface
+                        - ec2:DescribeNetworkInterfaces
+                        - ec2:DeleteNetworkInterface
                       - !Ref AWS::NoValue
                     Resource:
                       - '*'

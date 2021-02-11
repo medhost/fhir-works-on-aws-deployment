@@ -140,6 +140,6 @@ Resources:
         - !Ref AWS::NoValue
       VPCOptions: !If
         - isVpcEnabled
-        - SecurityGroupIds: ${self:custom.config.vpc.${self:custom.stage}.securityGroupIds}
-          SubnetIds: ${self:custom.config.vpc.${self:custom.stage}.subnetIds}
+        - SecurityGroupIds: ${self:custom.config.vpc.config.securityGroupIds}
+          SubnetIds: ${self:custom.config.vpc.config.subnetIds}
         - !Ref AWS::NoValue
