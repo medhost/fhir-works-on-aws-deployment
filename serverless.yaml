@@ -508,6 +508,9 @@ resources:
                       - !Ref AWS::NoValue
                     Resource:
                       - '*'
+                  - Effect: Allow
+                    Action: ssm:GetParameter
+                    Resource: ${self:custom.config.ssm.fhirTenantsSsmArn}
             - PolicyName: 'KMSPolicy'
               PolicyDocument:
                 Version: '2012-10-17'
