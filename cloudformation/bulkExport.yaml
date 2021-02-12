@@ -31,7 +31,11 @@ Resources:
               - Effect: Allow
                 Action: !If
                   - isVpcEnabled
-                  - ${self:custom.config.vpc.lambdaRoleVpcPermissions}
+                  - - ec2:DescribeInstances
+                    - ec2:CreateNetworkInterface
+                    - ec2:AttachNetworkInterface
+                    - ec2:DescribeNetworkInterfaces
+                    - ec2:DeleteNetworkInterface
                   - !Ref AWS::NoValue
                 Resource:
                   - '*'
@@ -196,7 +200,11 @@ Resources:
               - Effect: Allow
                 Action: !If
                   - isVpcEnabled
-                  - ${self:custom.config.vpc.lambdaRoleVpcPermissions}
+                  - - ec2:DescribeInstances
+                    - ec2:CreateNetworkInterface
+                    - ec2:AttachNetworkInterface
+                    - ec2:DescribeNetworkInterfaces
+                    - ec2:DeleteNetworkInterface
                   - !Ref AWS::NoValue
                 Resource:
                   - '*'
@@ -240,7 +248,11 @@ Resources:
               - Effect: Allow
                 Action: !If
                   - isVpcEnabled
-                  - ${self:custom.config.vpc.lambdaRoleVpcPermissions}
+                  - - ec2:DescribeInstances
+                    - ec2:CreateNetworkInterface
+                    - ec2:AttachNetworkInterface
+                    - ec2:DescribeNetworkInterfaces
+                    - ec2:DeleteNetworkInterface
                   - !Ref AWS::NoValue
                 Resource:
                   - '*'
