@@ -34,6 +34,7 @@ const esSearch = new ElasticSearchService(
     DynamoDbUtil.cleanItem,
     fhirVersion,
 );
+
 const s3DataService = new S3DataService(dynamoDbDataService, fhirVersion);
 
 const OAuthUrl =

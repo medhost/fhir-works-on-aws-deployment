@@ -29,6 +29,17 @@ Resources:
                   - glue:BatchStopJobRun
                 Resource: '*'
               - Effect: Allow
+                Action: !If
+                  - isVpcEnabled
+                  - - ec2:DescribeInstances
+                    - ec2:CreateNetworkInterface
+                    - ec2:AttachNetworkInterface
+                    - ec2:DescribeNetworkInterfaces
+                    - ec2:DeleteNetworkInterface
+                  - !Ref AWS::NoValue
+                Resource:
+                  - '*'
+              - Effect: Allow
                 Action:
                   - dynamodb:Query
                   - dynamodb:GetItem
@@ -51,6 +62,34 @@ Resources:
           - Id: ExpirationRule
             Status: Enabled
             ExpirationInDays: '3'
+
+  GlueScriptsBucketAccessPoint:
+    Type: AWS::S3::AccessPoint
+    Properties:
+      Bucket: !Ref GlueScriptsBucket
+      Name: '${self:custom.stage}-fhir-glue-scripts-bucket-access-point'
+      NetworkOrigin: 'VPC'
+      PublicAccessBlockConfiguration:
+        BlockPublicAcls: 'true'
+        BlockPublicPolicy: 'true'
+        IgnorePublicAcls: 'true'
+        RestrictPublicBuckets: 'true'
+      VpcConfiguration:
+        VpcId: '${self:custom.config.vpc.id}'
+
+  BulkExportResultsBucketAccessPoint:
+    Type: AWS::S3::AccessPoint
+    Properties:
+      Bucket: !Ref BulkExportResultsBucket
+      Name: '${self:custom.stage}-fhir-bulk-export-bucket-access-point'
+      NetworkOrigin: 'VPC'
+      PublicAccessBlockConfiguration:
+        BlockPublicAcls: 'true'
+        BlockPublicPolicy: 'true'
+        IgnorePublicAcls: 'true'
+        RestrictPublicBuckets: 'true'
+      VpcConfiguration:
+        VpcId: '${self:custom.config.vpc.id}'
 
   GlueJobRole:
     Type: AWS::IAM::Role
@@ -159,6 +198,17 @@ Resources:
             Version: '2012-10-17'
             Statement:
               - Effect: Allow
+                Action: !If
+                  - isVpcEnabled
+                  - - ec2:DescribeInstances
+                    - ec2:CreateNetworkInterface
+                    - ec2:AttachNetworkInterface
+                    - ec2:DescribeNetworkInterfaces
+                    - ec2:DeleteNetworkInterface
+                  - !Ref AWS::NoValue
+                Resource:
+                  - '*'
+              - Effect: Allow
                 Action:
                   - dynamodb:UpdateItem
                 Resource:
@@ -195,6 +245,17 @@ Resources:
           PolicyDocument:
             Version: '2012-10-17'
             Statement:
+              - Effect: Allow
+                Action: !If
+                  - isVpcEnabled
+                  - - ec2:DescribeInstances
+                    - ec2:CreateNetworkInterface
+                    - ec2:AttachNetworkInterface
+                    - ec2:DescribeNetworkInterfaces
+                    - ec2:DeleteNetworkInterface
+                  - !Ref AWS::NoValue
+                Resource:
+                  - '*'
               - Effect: Allow
                 Action:
                   - s3:PutObject

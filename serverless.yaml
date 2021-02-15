@@ -17,7 +17,7 @@ custom:
   stage: ${opt:stage, self:provider.stage}
   region: ${opt:region, self:provider.region}
   oauthRedirect: ${opt:oauthRedirect, 'http://localhost'}
-  config: ${file(serverless_config.json)}
+  config: ${ssm:/aws/reference/secretsmanager/fhir-works-${self:custom.stage}~true, file(serverless_config.json)}
 
 provider:
   name: aws
@@ -57,6 +57,7 @@ provider:
   tracing:
     apiGateway: true
     lambda: true
+  vpc: ${self:custom.config.vpc.config}
 
 functions:
   fhirServer:
@@ -105,7 +106,7 @@ functions:
           method: GET
           path: '/tenant/{tenantId}/metadata'
     handler: src/index.default
-    provisionedConcurrency: 5
+    provisionedConcurrency: ${self:custom.config.lambda.provisionedConcurrency}
     environment:
       EXPORT_STATE_MACHINE_ARN: !Ref BulkExportStateMachine
 
@@ -179,6 +180,18 @@ stepFunctions:
 resources:
   - Description: (SO0128) - Solution - Primary Template - This template creates all the necessary resources to deploy FHIR Works on AWS; a framework to deploy a FHIR server on AWS.
   - Parameters:
+      IsDev:
+        Type: String
+        Default: ${self:custom.config.isDevEnvironment}
+        Description: 'Sets config for dev environment if true - (true or false)'
+      UseExistingKibanaUserPool:
+        Type: String
+        Default: ${self:custom.config.kibana.useExistingUserPool}
+        Description: 'Configure existing or new Kibana cognito user pool if true - (true or false)'
+      IsVpcEnabled:
+        Type: String
+        Default: ${self:custom.config.vpc.enabled}
+        Description: 'turn on VPC for ES and relevant lambdas if true - (true or false)'
       Stage:
         Type: String
         Default: ${self:custom.stage}
@@ -199,8 +212,13 @@ resources:
         Default: 5
         Description: Number of Glue workers to use during an Export job.
   - Conditions:
-      isDev: !Equals [!Ref Stage, 'dev']
+      isDev: !Equals [!Ref IsDev, true]
       isNotDev: !Not [Condition: isDev]
+      kibanaUserPoolExists: !Equals [!Ref UseExistingKibanaUserPool, true]
+      isVpcEnabled: !Equals [!Ref IsVpcEnabled, true]
+      createNewKibanaUserPool: !And
+        - Condition: isDev
+        - !Not [Condition: kibanaUserPoolExists]
   - Resources:
       ResourceDynamoDBTableV2:
         Type: AWS::DynamoDB::Table
@@ -218,7 +236,8 @@ resources:
               KeyType: HASH
             - AttributeName: vid
               KeyType: RANGE
-          BillingMode: PAY_PER_REQUEST
+          BillingMode: ${PAY_PER_REQUEST, self:custom.config.dynamodb.billingMode}
+          ProvisionedThroughput: ${self:custom.config.dynamodb.provisionedThroughput}
           StreamSpecification:
             StreamViewType: NEW_AND_OLD_IMAGES
           SSESpecification:
@@ -250,7 +269,8 @@ resources:
             KMSMasterKeyId: !Ref DynamodbKMSKey
             SSEEnabled: true
             SSEType: 'KMS'
-          BillingMode: PAY_PER_REQUEST
+          BillingMode: ${PAY_PER_REQUEST, self:custom.config.dynamodb.billingMode}
+          ProvisionedThroughput: ${self:custom.config.dynamodb.provisionedThroughput}
           GlobalSecondaryIndexes:
             - IndexName: '${self:custom.exportRequestTableJobStatusIndex}'
               KeySchema:
@@ -260,6 +280,7 @@ resources:
                   KeyType: RANGE
               Projection:
                 ProjectionType: KEYS_ONLY
+              ProvisionedThroughput: ${self:custom.config.dynamodb.provisionedThroughput}
           Tags: !If
             - isNotDev
             - - Key: 'service'
@@ -383,7 +404,7 @@ resources:
                       - 'dynamodb:DeleteItem'
                       - 'dynamodb:BatchWriteItem'
                     Resource:
-                      - !GetAtt ResourceDynamoDBTableV2.Arn
+                      - !Join ['', [!GetAtt ResourceDynamoDBTableV2.Arn, '*']]
                       - !GetAtt ExportRequestDynamoDBTable.Arn
                   - Effect: Allow
                     Action:
@@ -428,6 +449,17 @@ resources:
                       - 'states:StartExecution'
                     Resource:
                       - !Ref BulkExportStateMachine
+                  - Effect: Allow
+                    Action: !If
+                      - isVpcEnabled
+                      - - ec2:DescribeInstances
+                        - ec2:CreateNetworkInterface
+                        - ec2:AttachNetworkInterface
+                        - ec2:DescribeNetworkInterfaces
+                        - ec2:DeleteNetworkInterface
+                      - !Ref AWS::NoValue
+                    Resource:
+                      - '*'
       DdbToEsLambdaRole:
         Type: AWS::IAM::Role
         Properties:
@@ -468,6 +500,20 @@ resources:
                       - 'es:ESHttp*'
                     Resource:
                       - !Join ['', [!GetAtt ElasticSearchDomain.Arn, '/*']]
+                  - Effect: Allow
+                    Action: !If
+                      - isVpcEnabled
+                      - - ec2:DescribeInstances
+                        - ec2:CreateNetworkInterface
+                        - ec2:AttachNetworkInterface
+                        - ec2:DescribeNetworkInterfaces
+                        - ec2:DeleteNetworkInterface
+                      - !Ref AWS::NoValue
+                    Resource:
+                      - '*'
+                  - Effect: Allow
+                    Action: ssm:GetParameter
+                    Resource: ${self:custom.config.ssm.fhirTenantsSsmArn}
             - PolicyName: 'KMSPolicy'
               PolicyDocument:
                 Version: '2012-10-17'
@@ -485,6 +531,48 @@ resources:
                     Resource:
                       - !GetAtt DynamodbKMSKey.Arn
                       - !GetAtt ElasticSearchKMSKey.Arn
+      FHIRBinaryBucketAccessPoint:
+        Type: AWS::S3::AccessPoint
+        Properties:
+          Bucket: !Ref FHIRBinaryBucket
+          Name: '${self:custom.stage}-fhir-binary-bucket-access-point'
+          NetworkOrigin: 'VPC'
+          PublicAccessBlockConfiguration:
+            BlockPublicAcls: 'true'
+            BlockPublicPolicy: 'true'
+            IgnorePublicAcls: 'true'
+            RestrictPublicBuckets: 'true'
+          VpcConfiguration:
+            VpcId: '${self:custom.config.vpc.id}'
+      FHIRLogsBucketAccessPoint:
+        Type: AWS::S3::AccessPoint
+        Properties:
+          Bucket: !Ref FHIRLogsBucket
+          Name: '${self:custom.stage}-fhir-logs-bucket-access-point'
+          NetworkOrigin: 'VPC'
+          PublicAccessBlockConfiguration:
+            BlockPublicAcls: 'true'
+            BlockPublicPolicy: 'true'
+            IgnorePublicAcls: 'true'
+            RestrictPublicBuckets: 'true'
+          VpcConfiguration:
+            VpcId: '${self:custom.config.vpc.id}'
+      ResourceDynamoDBTableVPCEndpoint:
+        Type: AWS::EC2::VPCEndpoint
+        Properties:
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: 'Allow'
+                Principal:
+                  Service:
+                    - lambda.amazonaws.com
+                Action:
+                  - 'dynamodb:*'
+                Resource:
+                  - !Join ['',[!GetAtt ResourceDynamoDBTableV2.Arn, '*']]
+          ServiceName: !Sub 'com.amazonaws.${self:custom.region}.dynamodb'
+          VpcId: ${self:custom.config.vpc.id}
   - extensions:
       FhirServerLogGroup:
         Properties:
@@ -526,6 +614,7 @@ resources:
   - ${file(cloudformation/elasticsearch.yaml)}
   - ${file(cloudformation/cognito.yaml)}
   - ${file(cloudformation/bulkExport.yaml)}
+  - ${file(cloudformation/dynamodbScaling.yaml)}
   - Outputs:
       UserPoolId:
         Description: User pool id for the provisioning users.
@@ -546,9 +635,12 @@ resources:
       ElasticSearchKibanaUserPoolId:
         Condition: isDev
         Description: User pool id for the provisioning ES Kibana users.
-        Value: !Ref KibanaUserPool
+        Value: !If
+          - kibanaUserPoolExists
+          - ${self:custom.config.kibana.userPoolId}
+          - !Ref KibanaUserPool
       ElasticSearchKibanaUserPoolAppClientId:
-        Condition: isDev
+        Condition: createNewKibanaUserPool
         Description: App client id for the provisioning ES Kibana users.
         Value: !Ref KibanaUserPoolClient
       CloudwatchExecutionLogGroup:
