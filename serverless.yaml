@@ -85,7 +85,7 @@ functions:
               - 'profile'
               - 'aws.cognito.signin.user.admin'
           method: ANY
-          path: /tenant/{tenantId}/
+          path: '/tenant/{tenantId}/'
           private: true
       - http:
           authorizer:
