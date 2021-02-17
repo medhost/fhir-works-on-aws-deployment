@@ -232,7 +232,7 @@ resources:
              NonKeyAttributes:
                - id
                - documentStatus
-               - resourseType
+               - resourceType
             ProjectionType: INCLUDE
           StreamSpecification:
             StreamViewType: NEW_AND_OLD_IMAGES
