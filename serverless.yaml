@@ -89,6 +89,17 @@ functions:
       - http:
           authorizer:
             type: COGNITO_USER_POOLS
+            authorizerId: !Ref ApiGatewayAuthorizer
+            scopes: # must have both scopes
+              - 'openid'
+              - 'profile'
+              - 'aws.cognito.signin.user.admin'
+          method: ANY
+          path: /tenant/{tenantId}/
+          private: true
+      - http:
+          authorizer:
+            type: COGNITO_USER_POOLS
             authorizerId:
               Ref: ApiGatewayAuthorizer
             scopes: # must have both scopes
