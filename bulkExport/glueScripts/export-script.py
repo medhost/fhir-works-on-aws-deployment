@@ -21,7 +21,7 @@ from datetime import datetime
 
 glueContext = GlueContext(SparkContext.getOrCreate())
 job = Job(glueContext)
-
+print('Start export script')
 args = getResolvedOptions(sys.argv, ['JOB_NAME', 'jobId', 'exportType', 'transactionTime', 'since', 'outputFormat', 'ddbTableName', 'workerType', 'numberWorkers', 's3OutputBucket'])
 
 # type, groupId and tenantId are optional parameters
@@ -31,9 +31,6 @@ if ('--{}'.format('type') in sys.argv):
 groupId = None
 if ('--{}'.format('groupId') in sys.argv):
     groupId = getResolvedOptions(sys.argv, ['groupId'])['groupId']
-tenantId = None
-if ('--{}'.format('tenantId') in sys.argv):
-    tenantId = getResolvedOptions(sys.argv, ['tenantId'])['tenantId']
 
 job_id = args['jobId']
 export_type = args['exportType']
@@ -45,9 +42,6 @@ worker_type = args['workerType']
 number_workers = args['numberWorkers']
 
 bucket_name = args['s3OutputBucket']
-
-if tenantId:
-    ddb_table_name += "-" + tenantId
 
 # Read data from DDB
 # dynamodb.splits is determined by the formula from the weblink below
