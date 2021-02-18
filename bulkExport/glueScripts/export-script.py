@@ -22,7 +22,7 @@ from datetime import datetime
 glueContext = GlueContext(SparkContext.getOrCreate())
 job = Job(glueContext)
 
-args = getResolvedOptions(sys.argv, ['JOB_NAME', 'jobId', 'exportType', 'transactionTime', 'since', 'outputFormat', 'ddbTableName', 'workerType', 'numberWorkers', 's3OutputBucket', 'tenantId'])
+args = getResolvedOptions(sys.argv, ['JOB_NAME', 'jobId', 'exportType', 'transactionTime', 'since', 'outputFormat', 'ddbTableName', 'workerType', 'numberWorkers', 's3OutputBucket'])
 
 # type, groupId and tenantId are optional parameters
 type = None
