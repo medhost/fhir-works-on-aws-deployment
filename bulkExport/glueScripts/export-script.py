@@ -22,7 +22,7 @@ from datetime import datetime
 glueContext = GlueContext(SparkContext.getOrCreate())
 job = Job(glueContext)
 
-args = getResolvedOptions(sys.argv, ['JOB_NAME', 'jobId', 'exportType', 'transactionTime', 'since', 'outputFormat', 'ddbTableName', 'workerType', 'numberWorkers', 's3OutputBucket'])
+args = getResolvedOptions(sys.argv, ['JOB_NAME', 'jobId', 'exportType', 'transactionTime', 'since', 'outputFormat', 'ddbTableName', 'workerType', 'numberWorkers', 's3OutputBucket', 'tenantId'])
 
 # type, groupId and tenantId are optional parameters
 type = None
@@ -54,6 +54,8 @@ if tenantId:
 # https://docs.aws.amazon.com/glue/latest/dg/aws-glue-programming-etl-connect.html#aws-glue-programming-etl-connect-dynamodb
 if (worker_type != "G.2X" and worker_type != "G.1X"):
     raise Exception(f"Worker type {worker_type} not supported. Please choose either worker G2.X or G1.X")
+
+print(f"Prepare reading from DDB table {ddb_table_name}")
 
 num_executors = int(number_workers) - 1
 num_slots_per_executor = 16 if worker_type == "G.2X" else 8
