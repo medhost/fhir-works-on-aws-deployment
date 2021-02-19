@@ -21,7 +21,7 @@ from datetime import datetime
 
 glueContext = GlueContext(SparkContext.getOrCreate())
 job = Job(glueContext)
-print('Start export script v2')
+print('Start export script v3')
 args = getResolvedOptions(sys.argv, ['JOB_NAME', 'jobId', 'exportType', 'transactionTime', 'since', 'outputFormat', 'ddbTableName', 'workerType', 'numberWorkers', 's3OutputBucket'])
 
 # type, groupId and tenantId are optional parameters
@@ -45,7 +45,7 @@ worker_type = args['workerType']
 number_workers = args['numberWorkers']
 
 bucket_name = args['s3OutputBucket']
-
+print(f"TenantID {tenantId}")
 if tenantId:
     ddb_table_name += "-" + tenantId
 
