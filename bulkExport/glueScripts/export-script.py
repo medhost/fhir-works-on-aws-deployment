@@ -49,6 +49,9 @@ print(f"TenantID {tenantId}")
 if tenantId:
     ddb_table_name += "-" + tenantId
 
+if tenantId:
+    ddb_table_name += "-" + tenantId
+
 # Read data from DDB
 # dynamodb.splits is determined by the formula from the weblink below
 # https://docs.aws.amazon.com/glue/latest/dg/aws-glue-programming-etl-connect.html#aws-glue-programming-etl-connect-dynamodb
