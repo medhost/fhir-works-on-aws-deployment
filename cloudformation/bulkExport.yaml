@@ -63,6 +63,36 @@ Resources:
             Status: Enabled
             ExpirationInDays: '3'
 
+  GlueScriptsBucketNoDeleteBucketRole:
+    Type: AWS::S3::Bucket
+    Properties:
+      Bucket: !Ref GlueScriptsBucket
+      PolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Sid: PreventDeleteBucket
+            Effect: Deny
+            Principal: '*'
+            Action:
+              - s3:DeleteBucket
+            Resource:
+              - !GetAtt GlueScriptsBucket.Arn
+
+  BulkExportBucketNoDeleteBucketRole:
+    Type: AWS::S3::Bucket
+    Properties:
+      Bucket: !Ref BulkExportResultsBucket
+      PolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Sid: PreventDeleteBucket
+            Effect: Deny
+            Principal: '*'
+            Action:
+              - s3:DeleteBucket
+            Resource:
+              - !GetAtt BulkExportResultsBucket.Arn
+
   GlueScriptsBucketAccessPoint:
     Type: AWS::S3::AccessPoint
     Properties:
