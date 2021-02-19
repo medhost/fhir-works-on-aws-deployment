@@ -346,20 +346,43 @@ resources:
               - ServerSideEncryptionByDefault:
                   SSEAlgorithm: aws:kms
                   KMSMasterKeyID: !Ref S3KMSKey
+          LifecycleConfiguration:
+            Rules:
+              - Id: GlacierRule
+                Status: Enabled
+                Transitions:
+                  - TransitionInDays: ${self:custom.config.s3.binaryBucket.transitionInDaysToGlacier}
+                    StorageClass: GLACIER
       FHIRLogsBucket:
         Type: AWS::S3::Bucket
         DeletionPolicy: Retain
         UpdateReplacePolicy: Retain
         Properties:
           AccessControl: LogDeliveryWrite
-      FHIRBinaryBucketHttpsOnlyPolicy:
+          LifecycleConfiguration:
+            Rules:
+              - Id: GlacierRule
+                Status: Enabled
+                Transitions:
+                  - TransitionInDays: ${self:custom.config.s3.logsBucket.transitionInDaysToGlacier}
+                    StorageClass: GLACIER
+      FHIRBinaryBucketHttpsVPCOnlyPolicy:
         Type: AWS::S3::BucketPolicy
         Properties:
           Bucket: !Ref FHIRBinaryBucket
           PolicyDocument:
             Version: '2012-10-17'
             Statement:
-              - Sid: AllowSSLRequestsOnly
+              - Sid: DisallowBucketAndObjectDelete
+                Effect: Deny
+                Principal: '*'
+                Action:
+                  - s3:DeleteBucket
+                  - s3:DeleteObject
+                Resource:
+                  - !GetAtt FHIRBinaryBucket.Arn
+                  - !Join ['', [!GetAtt FHIRBinaryBucket.Arn, '/*']]
+              - Sid: AllowOnlySSLRequestsFromVPC
                 Effect: Deny
                 Principal: '*'
                 Action:
@@ -370,6 +393,37 @@ resources:
                 Condition:
                   Bool:
                     'aws:SecureTransport': false
+                  StringNotEquals:
+                    'aws:SourceVpc': ${self:custom.config.vpc.id}
+      FHIRLogsBucketVPCOnlyRole:
+        Type: AWS::S3::BucketPolicy
+        Properties:
+          Bucket: !Ref FHIRLogsBucket
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Sid: DisallowBucketAndObjectDelete
+                Effect: Deny
+                Principal: '*'
+                Action:
+                  - s3:DeleteBucket
+                  - s3:DeleteObject
+                Resource:
+                  - !GetAtt FHIRLogsBucket.Arn
+                  - !Join [ '', [ !GetAtt FHIRLogsBucket.Arn, '/*' ] ]
+              - Sid: AllowOnlySSLRequestsFromVPC
+                Effect: Deny
+                Principal: '*'
+                Action:
+                  - s3:*
+                Resource:
+                  - !GetAtt FHIRLogsBucket.Arn
+                  - !Join [ '', [ !GetAtt FHIRLogsBucket.Arn, '/*' ] ]
+                Condition:
+                  Bool:
+                    'aws:SecureTransport': false
+                  StringNotEquals:
+                    'aws:SourceVpc': ${self:custom.config.vpc.id}
       FhirServerLambdaRole:
         Type: AWS::IAM::Role
         Properties:
