@@ -396,7 +396,7 @@ resources:
                   StringNotEquals:
                     'aws:SourceVpc': ${self:custom.config.vpc.id}
       FHIRLogsBucketVPCOnlyRole:
-        Type: AWS::S3::Bucket
+        Type: AWS::S3::BucketPolicy
         Properties:
           Bucket: !Ref FHIRLogsBucket
           PolicyDocument:
