@@ -246,18 +246,18 @@ resources:
           ProvisionedThroughput: ${self:custom.config.dynamodb.provisionedThroughput}
           GlobalSecondaryIndexes:
             - IndexName: externalId-vid-index
-            KeySchema:
-              - AttributeName: externalId
-                KeyType: HASH
-              - AttributeName: vid
-                KeyType: RANGE
-            Projection:
-              NonKeyAttributes:
-                - id
-                - documentStatus
-                - resourceType
-            ProjectionType: INCLUDE
-            ProvisionedThroughput: ${self:custom.config.dynamodb.provisionedThroughput}
+              KeySchema:
+                - AttributeName: externalId
+                  KeyType: HASH
+                - AttributeName: vid
+                  KeyType: RANGE
+              Projection:
+                NonKeyAttributes:
+                 - id
+                 - documentStatus
+                 - resourceType
+                ProjectionType: INCLUDE
+              ProvisionedThroughput: ${self:custom.config.dynamodb.provisionedThroughput}
           StreamSpecification:
             StreamViewType: NEW_AND_OLD_IMAGES
           SSESpecification:
