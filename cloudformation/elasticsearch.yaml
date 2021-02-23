@@ -87,9 +87,9 @@ Resources:
       EBSOptions: # Assuming ~100GB storage requirement for PROD; min storage requirement is ~290GB https://docs.aws.amazon.com/elasticsearch-service/latest/developerguide/sizing-domains.html
         EBSEnabled: true
         VolumeType: gp2
-        VolumeSize: !If [isDev, 10, 73]
+        VolumeSize: !If [isDev, 10, 100]
       ElasticsearchClusterConfig:
-        InstanceType: !If [isDev, t3.medium.elasticsearch, m5.large.elasticsearch]
+        InstanceType: !If [isDev, t3.small.elasticsearch, m5.large.elasticsearch]
         InstanceCount: !If [isDev, 1, 4]
         DedicatedMasterEnabled: !If [isDev, false, true]
         DedicatedMasterCount: !If [isDev, !Ref AWS::NoValue, 3]
@@ -122,7 +122,14 @@ Resources:
                   - !GetAtt AdminKibanaAccessRole.Arn
               Action: 'es:*'
               Resource:
-                - !Sub 'arn:${AWS::Partition}:es:${AWS::Region}:${AWS::AccountId}:domain/*'
+                - !Join [
+                    '',
+                    [
+                      !Sub 'arn:${AWS::Partition}:es:${AWS::Region}:${AWS::AccountId}:domain/',
+                      !Ref Stage,
+                      '-fhir/*'
+                    ]
+                  ]
             - Effect: Allow
               Principal:
                 AWS:
@@ -136,7 +143,14 @@ Resources:
                     ]
               Action: es:*
               Resource:
-                Fn::Sub: arn:${AWS::Partition}:es:${AWS::Region}:${AWS::AccountId}:domain/*
+                - !Join [
+                    '',
+                    [
+                      !Sub 'arn:${AWS::Partition}:es:${AWS::Region}:${AWS::AccountId}:domain/',
+                      !Ref Stage,
+                      '-fhir/*'
+                    ]
+                  ]
         - !Ref AWS::NoValue
       VPCOptions: !If
         - isVpcEnabled
