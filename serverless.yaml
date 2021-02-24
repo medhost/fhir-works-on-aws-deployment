@@ -742,3 +742,4 @@ plugins:
   - serverless-step-functions
   - serverless-plugin-typescript
   - serverless-offline
+  - serverless-plugin-diff

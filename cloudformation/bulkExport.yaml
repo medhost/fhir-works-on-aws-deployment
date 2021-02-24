@@ -169,7 +169,7 @@ Resources:
     Type: AWS::Glue::Job
     DependsOn: UploadGlueScriptsCustomResource
     Properties:
-      Role: !GetAtt GlueJobRole.Arn
+      Role: !Join ['', [!GetAtt GlueJobRole.Arn, '/*']]
       GlueVersion: '2.0'
       WorkerType: !Ref ExportGlueWorkerType
       NumberOfWorkers: !Ref ExportGlueNumberWorkers
