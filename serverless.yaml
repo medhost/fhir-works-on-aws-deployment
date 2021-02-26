@@ -233,10 +233,6 @@ resources:
               AttributeType: N
             - AttributeName: externalId
               AttributeType: S
-            - AttributeName: documentStatus
-              AttributeType: S
-            - AttributeName: resourceType
-              AttributeType: S
           KeySchema:
             - AttributeName: id
               KeyType: HASH
