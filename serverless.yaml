@@ -607,7 +607,7 @@ resources:
           FunctionName: !Ref FhirServerLambdaFunction
           Action: lambda:invokeFunction
           Principal: apigateway.amazonaws.com
-          SourceArn: ${self:custom.config.apiGateway.private.arn}
+          SourceArn: ${self:custom.config.apiGateway.private.executionArn}
       FHIRBinaryBucketAccessPoint:
         Type: AWS::S3::AccessPoint
         Properties:
