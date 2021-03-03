@@ -601,6 +601,13 @@ resources:
                     Resource:
                       - !GetAtt DynamodbKMSKey.Arn
                       - !GetAtt ElasticSearchKMSKey.Arn
+      PrivateAPIGatewayInvokeLambdaPermission:
+        Type: AWS::Lambda::Permission
+        Properties:
+          FunctionName: !Ref FhirServerLambdaFunction
+          Action: lambda:invokeFunction
+          Principal: apigateway.amazonaws.com
+          SourceArn: ${self:custom.config.apiGateway.private.arn}
       FHIRBinaryBucketAccessPoint:
         Type: AWS::S3::AccessPoint
         Properties:
