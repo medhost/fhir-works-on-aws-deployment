@@ -50,6 +50,7 @@ provider:
     PATIENT_PICKER_ENDPOINT: ${self:custom.patientPickerEndpoint}
     EXPORT_RESULTS_BUCKET: !Ref BulkExportResultsBucket
     EXPORT_RESULTS_SIGNER_ROLE_ARN: !GetAtt ExportResultsSignerRole.Arn
+    TENANT_PARAMETER_STORE: !Join ['', ['${self:custom.stage}', '-fhir-tenants']]
   apiKeys:
     - name: 'developer-key-${self:custom.stage}' # Full name must be known at package-time
       description: Key for developer to access the FHIR Api
@@ -81,11 +82,26 @@ functions:
           path: '{proxy+}'
           private: true
       - http:
+          authorizer:
+            type: COGNITO_USER_POOLS
+            authorizerId:
+              Ref: ApiGatewayAuthorizer
+            scopes: # must have both scopes
+              - 'openid'
+              - 'profile'
+              - 'aws.cognito.signin.user.admin'
+          method: ANY
+          path: '/tenant/{tenantId}/{proxy+}'
+          private: true
+      - http:
           method: GET
           path: /metadata
       - http:
           method: GET
           path: /.well-known/smart-configuration
+      - http:
+          method: GET
+          path: '/tenant/{tenantId}/metadata'
     handler: src/index.default
     provisionedConcurrency: 5
     environment:
