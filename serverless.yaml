@@ -743,6 +743,9 @@ resources:
       DynamodbKMSKeyArn:
         Description: KMS Key for SSE on multitenant DDB tables
         Value: !GetAtt DynamodbKMSKey.Arn
+      DdbToEsLambdaFunctionArn:
+        Description: ddbToEs function Arn for setting up multitenant ddb streams
+        Value: !GetAtt DdbToEsLambdaFunction.Arn
 
 plugins:
   - serverless-step-functions
