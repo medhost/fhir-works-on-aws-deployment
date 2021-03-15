@@ -740,6 +740,9 @@ resources:
           ]
         Export:
           Name: !Join ['-', [CloudwatchExecutionLogGroup, !Ref Stage, Arn]]
+      DynamodbKMSKeyArn:
+        Description: KMS Key for SSE on multitenant DDB tables
+        Value: !GetAtt DynamodbKMSKey.Arn
 
 plugins:
   - serverless-step-functions
