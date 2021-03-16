@@ -238,8 +238,10 @@ resources:
               KeyType: HASH
             - AttributeName: vid
               KeyType: RANGE
-          BillingMode: ${PAY_PER_REQUEST, self:custom.config.dynamodb.billingMode}
-          ProvisionedThroughput: ${self:custom.config.dynamodb.provisionedThroughput}
+          BillingMode: PROVISIONED
+          ProvisionedThroughput:
+            ReadCapacityUnits: 2
+            WriteCapacityUnits: 2
           GlobalSecondaryIndexes:
             - IndexName: externalId-vid-index
               KeySchema:
@@ -253,7 +255,9 @@ resources:
                  - documentStatus
                  - resourceType
                 ProjectionType: INCLUDE
-              ProvisionedThroughput: ${self:custom.config.dynamodb.provisionedThroughput}
+              ProvisionedThroughput:
+                ReadCapacityUnits: 2
+                WriteCapacityUnits: 2
           StreamSpecification:
             StreamViewType: NEW_AND_OLD_IMAGES
           SSESpecification:
@@ -285,8 +289,10 @@ resources:
             KMSMasterKeyId: !Ref DynamodbKMSKey
             SSEEnabled: true
             SSEType: 'KMS'
-          BillingMode: ${PAY_PER_REQUEST, self:custom.config.dynamodb.billingMode}
-          ProvisionedThroughput: ${self:custom.config.dynamodb.provisionedThroughput}
+          BillingMode: PROVISIONED
+          ProvisionedThroughput:
+            ReadCapacityUnits: 2
+            WriteCapacityUnits: 2
           GlobalSecondaryIndexes:
             - IndexName: '${self:custom.exportRequestTableJobStatusIndex}'
               KeySchema:
@@ -296,7 +302,9 @@ resources:
                   KeyType: RANGE
               Projection:
                 ProjectionType: KEYS_ONLY
-              ProvisionedThroughput: ${self:custom.config.dynamodb.provisionedThroughput}
+              ProvisionedThroughput:
+                ReadCapacityUnits: 2
+                WriteCapacityUnits: 2
           Tags: !If
             - isNotDev
             - - Key: 'service'
@@ -692,7 +700,6 @@ resources:
   - ${file(cloudformation/elasticsearch.yaml)}
   - ${file(cloudformation/cognito.yaml)}
   - ${file(cloudformation/bulkExport.yaml)}
-  - ${file(cloudformation/dynamodbScaling.yaml)}
   - Outputs:
       UserPoolId:
         Description: User pool id for the provisioning users.
