@@ -3,7 +3,14 @@
  *  SPDX-License-Identifier: Apache-2.0
  */
 
-import { FhirConfig, FhirVersion, stubs, BASE_R4_RESOURCES, BASE_STU3_RESOURCES } from 'fhir-works-on-aws-interface';
+import {
+    BASE_R4_RESOURCES,
+    BASE_STU3_RESOURCES,
+    FhirConfig,
+    FhirVersion,
+    Resource,
+    stubs,
+} from 'fhir-works-on-aws-interface';
 import { ElasticSearchService } from 'fhir-works-on-aws-search-es';
 import { RBACHandler } from 'fhir-works-on-aws-authz-rbac';
 import {
@@ -41,6 +48,14 @@ const OAuthUrl =
     process.env.OAUTH2_DOMAIN_ENDPOINT === '[object Object]' || process.env.OAUTH2_DOMAIN_ENDPOINT === undefined
         ? 'https://OAUTH2.com'
         : process.env.OAUTH2_DOMAIN_ENDPOINT;
+
+const supportedResource: Resource = {
+    operations: ['read', 'search-type'],
+    fhirVersions: [fhirVersion],
+    persistence: dynamoDbDataService,
+    typeSearch: esSearch,
+    typeHistory: stubs.history,
+};
 
 export const fhirConfig: FhirConfig = {
     configVersion: 1.0,
@@ -80,16 +95,30 @@ export const fhirConfig: FhirConfig = {
         systemSearch: stubs.search,
         bulkDataAccess: dynamoDbDataService,
         fhirVersion,
-        genericResource: {
-            operations: ['create', 'read', 'update', 'delete', 'vread', 'search-type'],
-            fhirVersions: [fhirVersion],
-            persistence: dynamoDbDataService,
-            typeSearch: esSearch,
-            typeHistory: stubs.history,
-        },
         resources: {
+            AllergyIntolerance: supportedResource,
+            CarePlan: supportedResource,
+            CareTeam: supportedResource,
+            Condition: supportedResource,
+            Demographics: supportedResource,
+            Device: supportedResource,
+            DiagnosticReport: supportedResource,
+            DocumentReference: supportedResource,
+            Encounter: supportedResource,
+            Goal: supportedResource,
+            Immunizations: supportedResource,
+            Location: supportedResource,
+            Medication: supportedResource,
+            MedicationRequest: supportedResource,
+            Observation: supportedResource,
+            Organization: supportedResource,
+            Patient: supportedResource,
+            Practitioner: supportedResource,
+            PractitionerRole: supportedResource,
+            Procedure: supportedResource,
+            Provenance: supportedResource,
             Binary: {
-                operations: ['create', 'read', 'update', 'delete', 'vread'],
+                operations: ['read'],
                 fhirVersions: [fhirVersion],
                 persistence: s3DataService,
                 typeSearch: stubs.search,
