@@ -590,9 +590,6 @@ resources:
                       - !Ref AWS::NoValue
                     Resource:
                       - '*'
-                  - Effect: Allow
-                    Action: ssm:GetParameter
-                    Resource: ${self:custom.config.ssm.fhirTenantsSsmArn}
             - PolicyName: 'KMSPolicy'
               PolicyDocument:
                 Version: '2012-10-17'
@@ -610,13 +607,6 @@ resources:
                     Resource:
                       - !GetAtt DynamodbKMSKey.Arn
                       - !GetAtt ElasticSearchKMSKey.Arn
-      FhirServerLambdaPermissionPrivateApiGateway:
-        Type: AWS::Lambda::Permission
-        Properties:
-          FunctionName: !Ref FhirServerLambdaFunction
-          Action: lambda:invokeFunction
-          Principal: apigateway.amazonaws.com
-          SourceArn: !Join [ '',['${self:custom.config.apiGateway.private.executionArn}','/*/*']]
       FHIRBinaryBucketAccessPoint:
         Type: AWS::S3::AccessPoint
         Properties:
@@ -754,6 +744,9 @@ resources:
       DdbToEsLambdaFunctionArn:
         Description: ddbToEs function Arn for setting up multitenant ddb streams
         Value: !GetAtt DdbToEsLambdaFunction.Arn
+      DdbToEsLambdaRoleArn:
+        Description: ddbToEs lambda IAM role arn
+        Value: !GetAtt DdbToEsLambdaRole.Arn
 
 plugins:
   - serverless-step-functions
