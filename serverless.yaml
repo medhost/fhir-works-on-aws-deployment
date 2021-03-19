@@ -744,9 +744,9 @@ resources:
       DdbToEsLambdaFunctionArn:
         Description: ddbToEs function Arn for setting up multitenant ddb streams
         Value: !GetAtt DdbToEsLambdaFunction.Arn
-      DdbToEsLambdaRoleName:
-        Description: ddbToEs lambda IAM role name
-        Value: !GetAtt DdbToEsLambdaRole.Name
+      DdbToEsLambdaRoleArn:
+        Description: ddbToEs lambda IAM role arn
+        Value: !GetAtt DdbToEsLambdaRole.Arn
 
 plugins:
   - serverless-step-functions
