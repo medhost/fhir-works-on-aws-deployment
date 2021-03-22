@@ -251,9 +251,10 @@ resources:
                   KeyType: RANGE
               Projection:
                 NonKeyAttributes:
-                 - id
                  - documentStatus
                  - resourceType
+                 - eventDateTime
+                 - meta
                 ProjectionType: INCLUDE
               ProvisionedThroughput:
                 ReadCapacityUnits: 2
