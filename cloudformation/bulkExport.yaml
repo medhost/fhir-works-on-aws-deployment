@@ -29,6 +29,17 @@ Resources:
                   - glue:BatchStopJobRun
                 Resource: '*'
               - Effect: Allow
+                Action: !If
+                  - isVpcEnabled
+                  - - ec2:DescribeInstances
+                    - ec2:CreateNetworkInterface
+                    - ec2:AttachNetworkInterface
+                    - ec2:DescribeNetworkInterfaces
+                    - ec2:DeleteNetworkInterface
+                  - !Ref AWS::NoValue
+                Resource:
+                  - '*'
+              - Effect: Allow
                 Action:
                   - dynamodb:Query
                   - dynamodb:GetItem
@@ -51,6 +62,64 @@ Resources:
           - Id: ExpirationRule
             Status: Enabled
             ExpirationInDays: '3'
+
+  GlueScriptsBucketNoDeleteBucketPolicy:
+    Type: AWS::S3::BucketPolicy
+    Properties:
+      Bucket: !Ref GlueScriptsBucket
+      PolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Sid: PreventDeleteBucket
+            Effect: Deny
+            Principal: '*'
+            Action:
+              - s3:DeleteBucket
+            Resource:
+              - !GetAtt GlueScriptsBucket.Arn
+
+  BulkExportBucketNoDeleteBucketPolicy:
+    Type: AWS::S3::BucketPolicy
+    Properties:
+      Bucket: !Ref BulkExportResultsBucket
+      PolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Sid: PreventDeleteBucket
+            Effect: Deny
+            Principal: '*'
+            Action:
+              - s3:DeleteBucket
+            Resource:
+              - !GetAtt BulkExportResultsBucket.Arn
+
+  GlueScriptsBucketAccessPoint:
+    Type: AWS::S3::AccessPoint
+    Properties:
+      Bucket: !Ref GlueScriptsBucket
+      Name: '${self:custom.stage}-fhir-glue-scripts-bucket-access-point'
+      NetworkOrigin: 'VPC'
+      PublicAccessBlockConfiguration:
+        BlockPublicAcls: 'true'
+        BlockPublicPolicy: 'true'
+        IgnorePublicAcls: 'true'
+        RestrictPublicBuckets: 'true'
+      VpcConfiguration:
+        VpcId: '${self:custom.config.vpc.id}'
+
+  BulkExportResultsBucketAccessPoint:
+    Type: AWS::S3::AccessPoint
+    Properties:
+      Bucket: !Ref BulkExportResultsBucket
+      Name: '${self:custom.stage}-fhir-bulk-export-bucket-access-point'
+      NetworkOrigin: 'VPC'
+      PublicAccessBlockConfiguration:
+        BlockPublicAcls: 'true'
+        BlockPublicPolicy: 'true'
+        IgnorePublicAcls: 'true'
+        RestrictPublicBuckets: 'true'
+      VpcConfiguration:
+        VpcId: '${self:custom.config.vpc.id}'
 
   GlueJobRole:
     Type: AWS::IAM::Role
@@ -100,7 +169,7 @@ Resources:
     Type: AWS::Glue::Job
     DependsOn: UploadGlueScriptsCustomResource
     Properties:
-      Role: !GetAtt GlueJobRole.Arn
+      Role: !Join ['', [!GetAtt GlueJobRole.Arn, '/*']]
       GlueVersion: '2.0'
       WorkerType: !Ref ExportGlueWorkerType
       NumberOfWorkers: !Ref ExportGlueNumberWorkers
@@ -159,6 +228,17 @@ Resources:
             Version: '2012-10-17'
             Statement:
               - Effect: Allow
+                Action: !If
+                  - isVpcEnabled
+                  - - ec2:DescribeInstances
+                    - ec2:CreateNetworkInterface
+                    - ec2:AttachNetworkInterface
+                    - ec2:DescribeNetworkInterfaces
+                    - ec2:DeleteNetworkInterface
+                  - !Ref AWS::NoValue
+                Resource:
+                  - '*'
+              - Effect: Allow
                 Action:
                   - dynamodb:UpdateItem
                 Resource:
@@ -195,6 +275,17 @@ Resources:
           PolicyDocument:
             Version: '2012-10-17'
             Statement:
+              - Effect: Allow
+                Action: !If
+                  - isVpcEnabled
+                  - - ec2:DescribeInstances
+                    - ec2:CreateNetworkInterface
+                    - ec2:AttachNetworkInterface
+                    - ec2:DescribeNetworkInterfaces
+                    - ec2:DeleteNetworkInterface
+                  - !Ref AWS::NoValue
+                Resource:
+                  - '*'
               - Effect: Allow
                 Action:
                   - s3:PutObject

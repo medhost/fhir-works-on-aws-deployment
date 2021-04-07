@@ -19,6 +19,7 @@ custom:
   issuerEndpoint: ${opt:issuerEndpoint}
   oAuth2ApiEndpoint: ${opt:oAuth2ApiEndpoint}
   patientPickerEndpoint: ${opt:patientPickerEndpoint}
+  config: ${ssm:/aws/reference/secretsmanager/fhir-works-${self:custom.stage}~true, file(serverless_config.json)}
   bundle:
     externals:
       - fhir-works-on-aws-routing
@@ -66,6 +67,7 @@ provider:
   tracing:
     apiGateway: true
     lambda: true
+  vpc: ${self:custom.config.vpc.config}
 
 functions:
   fhirServer:
@@ -103,7 +105,7 @@ functions:
           method: GET
           path: '/tenant/{tenantId}/metadata'
     handler: src/index.default
-    provisionedConcurrency: 5
+    provisionedConcurrency: ${self:custom.config.lambda.provisionedConcurrency}
     environment:
       EXPORT_STATE_MACHINE_ARN: !Ref BulkExportStateMachine
 
@@ -177,6 +179,18 @@ stepFunctions:
 resources:
   - Description: (SO0128) - Solution - Primary Template - This template creates all the necessary resources to deploy FHIR Works on AWS; a framework to deploy a FHIR server on AWS.
   - Parameters:
+      IsDev:
+        Type: String
+        Default: ${self:custom.config.isDevEnvironment}
+        Description: 'Sets config for dev environment if true - (true or false)'
+      UseExistingKibanaUserPool:
+        Type: String
+        Default: ${self:custom.config.kibana.useExistingUserPool}
+        Description: 'Configure existing or new Kibana cognito user pool if true - (true or false)'
+      IsVpcEnabled:
+        Type: String
+        Default: ${self:custom.config.vpc.enabled}
+        Description: 'turn on VPC for ES and relevant lambdas if true - (true or false)'
       Stage:
         Type: String
         Default: ${self:custom.stage}
@@ -193,8 +207,13 @@ resources:
         Default: 5
         Description: Number of Glue workers to use during an Export job.
   - Conditions:
-      isDev: !Equals [!Ref Stage, 'dev']
+      isDev: !Equals [!Ref IsDev, true]
       isNotDev: !Not [Condition: isDev]
+      kibanaUserPoolExists: !Equals [ !Ref UseExistingKibanaUserPool, true ]
+      isVpcEnabled: !Equals [ !Ref IsVpcEnabled, true ]
+      createNewKibanaUserPool: !And
+        - Condition: isDev
+        - !Not [ Condition: kibanaUserPoolExists ]
   - Resources:
       ResourceDynamoDBTableV2:
         Type: AWS::DynamoDB::Table
@@ -207,12 +226,34 @@ resources:
               AttributeType: S
             - AttributeName: vid
               AttributeType: N
+            - AttributeName: externalId
+              AttributeType: S
           KeySchema:
             - AttributeName: id
               KeyType: HASH
             - AttributeName: vid
               KeyType: RANGE
-          BillingMode: PAY_PER_REQUEST
+          BillingMode: PROVISIONED
+          ProvisionedThroughput:
+            ReadCapacityUnits: 2
+            WriteCapacityUnits: 2
+          GlobalSecondaryIndexes:
+            - IndexName: externalId-vid-index
+              KeySchema:
+                - AttributeName: externalId
+                  KeyType: HASH
+                - AttributeName: vid
+                  KeyType: RANGE
+              Projection:
+                NonKeyAttributes:
+                  - documentStatus
+                  - resourceType
+                  - eventDateTime
+                  - meta
+                ProjectionType: INCLUDE
+              ProvisionedThroughput:
+                ReadCapacityUnits: 2
+                WriteCapacityUnits: 2
           StreamSpecification:
             StreamViewType: NEW_AND_OLD_IMAGES
           SSESpecification:
@@ -244,7 +285,10 @@ resources:
             KMSMasterKeyId: !Ref DynamodbKMSKey
             SSEEnabled: true
             SSEType: 'KMS'
-          BillingMode: PAY_PER_REQUEST
+          BillingMode: PROVISIONED
+          ProvisionedThroughput:
+            ReadCapacityUnits: 2
+            WriteCapacityUnits: 2
           GlobalSecondaryIndexes:
             - IndexName: '${self:custom.exportRequestTableJobStatusIndex}'
               KeySchema:
@@ -254,6 +298,9 @@ resources:
                   KeyType: RANGE
               Projection:
                 ProjectionType: KEYS_ONLY
+              ProvisionedThroughput:
+                ReadCapacityUnits: 2
+                WriteCapacityUnits: 2
           Tags: !If
             - isNotDev
             - - Key: 'service'
@@ -274,20 +321,43 @@ resources:
               - ServerSideEncryptionByDefault:
                   SSEAlgorithm: aws:kms
                   KMSMasterKeyID: !Ref S3KMSKey
+          LifecycleConfiguration:
+            Rules:
+              - Id: GlacierRule
+                Status: Enabled
+                Transitions:
+                  - TransitionInDays: ${self:custom.config.s3.binaryBucket.transitionInDaysToGlacier}
+                    StorageClass: GLACIER
       FHIRLogsBucket:
         Type: AWS::S3::Bucket
         DeletionPolicy: Retain
         UpdateReplacePolicy: Retain
         Properties:
           AccessControl: LogDeliveryWrite
-      FHIRBinaryBucketHttpsOnlyPolicy:
+          LifecycleConfiguration:
+            Rules:
+              - Id: GlacierRule
+                Status: Enabled
+                Transitions:
+                  - TransitionInDays: ${self:custom.config.s3.logsBucket.transitionInDaysToGlacier}
+                    StorageClass: GLACIER
+      FHIRBinaryBucketHttpsVPCOnlyPolicy:
         Type: AWS::S3::BucketPolicy
         Properties:
           Bucket: !Ref FHIRBinaryBucket
           PolicyDocument:
             Version: '2012-10-17'
             Statement:
-              - Sid: AllowSSLRequestsOnly
+              - Sid: DisallowBucketAndObjectDelete
+                Effect: Deny
+                Principal: '*'
+                Action:
+                  - s3:DeleteBucket
+                  - s3:DeleteObject
+                Resource:
+                  - !GetAtt FHIRBinaryBucket.Arn
+                  - !Join ['', [!GetAtt FHIRBinaryBucket.Arn, '/*']]
+              - Sid: AllowOnlySSLRequestsFromVPC
                 Effect: Deny
                 Principal: '*'
                 Action:
@@ -298,6 +368,37 @@ resources:
                 Condition:
                   Bool:
                     'aws:SecureTransport': false
+                  StringNotEquals:
+                    'aws:SourceVpc': ${self:custom.config.vpc.id}
+      FHIRLogsBucketVPCOnlyRole:
+        Type: AWS::S3::BucketPolicy
+        Properties:
+          Bucket: !Ref FHIRLogsBucket
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Sid: DisallowBucketAndObjectDelete
+                Effect: Deny
+                Principal: '*'
+                Action:
+                  - s3:DeleteBucket
+                  - s3:DeleteObject
+                Resource:
+                  - !GetAtt FHIRLogsBucket.Arn
+                  - !Join [ '', [ !GetAtt FHIRLogsBucket.Arn, '/*' ] ]
+              - Sid: AllowOnlySSLRequestsFromVPC
+                Effect: Deny
+                Principal: '*'
+                Action:
+                  - s3:*
+                Resource:
+                  - !GetAtt FHIRLogsBucket.Arn
+                  - !Join [ '', [ !GetAtt FHIRLogsBucket.Arn, '/*' ] ]
+                Condition:
+                  Bool:
+                    'aws:SecureTransport': false
+                  StringNotEquals:
+                    'aws:SourceVpc': ${self:custom.config.vpc.id}
       FhirServerLambdaRole:
         Type: AWS::IAM::Role
         Properties:
@@ -343,7 +444,7 @@ resources:
                       - 'dynamodb:DeleteItem'
                       - 'dynamodb:BatchWriteItem'
                     Resource:
-                      - !GetAtt ResourceDynamoDBTableV2.Arn
+                      - !Join ['', [!GetAtt ResourceDynamoDBTableV2.Arn, '*']]
                       - !GetAtt ExportRequestDynamoDBTable.Arn
                   - Effect: Allow
                     Action:
@@ -388,6 +489,17 @@ resources:
                       - 'states:StartExecution'
                     Resource:
                       - !Ref BulkExportStateMachine
+                  - Effect: Allow
+                    Action: !If
+                      - isVpcEnabled
+                      - - ec2:DescribeInstances
+                        - ec2:CreateNetworkInterface
+                        - ec2:AttachNetworkInterface
+                        - ec2:DescribeNetworkInterfaces
+                        - ec2:DeleteNetworkInterface
+                      - !Ref AWS::NoValue
+                    Resource:
+                      - '*'
       DdbToEsLambdaRole:
         Type: AWS::IAM::Role
         Properties:
@@ -417,6 +529,7 @@ resources:
                       - dynamodb:GetRecords
                     Resource:
                       - !GetAtt ResourceDynamoDBTableV2.StreamArn
+                      - !Join ['', [!GetAtt ResourceDynamoDBTableV2.Arn, '-*/stream/*']]
                   - Effect: Allow
                     Action:
                       - xray:PutTraceSegments
@@ -428,6 +541,17 @@ resources:
                       - 'es:ESHttp*'
                     Resource:
                       - !Join ['', [!GetAtt ElasticSearchDomain.Arn, '/*']]
+                  - Effect: Allow
+                    Action: !If
+                      - isVpcEnabled
+                      - - ec2:DescribeInstances
+                        - ec2:CreateNetworkInterface
+                        - ec2:AttachNetworkInterface
+                        - ec2:DescribeNetworkInterfaces
+                        - ec2:DeleteNetworkInterface
+                      - !Ref AWS::NoValue
+                    Resource:
+                      - '*'
             - PolicyName: 'KMSPolicy'
               PolicyDocument:
                 Version: '2012-10-17'
@@ -445,6 +569,48 @@ resources:
                     Resource:
                       - !GetAtt DynamodbKMSKey.Arn
                       - !GetAtt ElasticSearchKMSKey.Arn
+      FHIRBinaryBucketAccessPoint:
+        Type: AWS::S3::AccessPoint
+        Properties:
+          Bucket: !Ref FHIRBinaryBucket
+          Name: '${self:custom.stage}-fhir-binary-bucket-access-point'
+          NetworkOrigin: 'VPC'
+          PublicAccessBlockConfiguration:
+            BlockPublicAcls: 'true'
+            BlockPublicPolicy: 'true'
+            IgnorePublicAcls: 'true'
+            RestrictPublicBuckets: 'true'
+          VpcConfiguration:
+            VpcId: '${self:custom.config.vpc.id}'
+      FHIRLogsBucketAccessPoint:
+        Type: AWS::S3::AccessPoint
+        Properties:
+          Bucket: !Ref FHIRLogsBucket
+          Name: '${self:custom.stage}-fhir-logs-bucket-access-point'
+          NetworkOrigin: 'VPC'
+          PublicAccessBlockConfiguration:
+            BlockPublicAcls: 'true'
+            BlockPublicPolicy: 'true'
+            IgnorePublicAcls: 'true'
+            RestrictPublicBuckets: 'true'
+          VpcConfiguration:
+            VpcId: '${self:custom.config.vpc.id}'
+      ResourceDynamoDBTableVPCEndpoint:
+        Type: AWS::EC2::VPCEndpoint
+        Properties:
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: 'Allow'
+                Principal:
+                  Service:
+                    - lambda.amazonaws.com
+                Action:
+                  - 'dynamodb:*'
+                Resource:
+                  - !Join ['',[!GetAtt ResourceDynamoDBTableV2.Arn, '*']]
+          ServiceName: !Sub 'com.amazonaws.${self:custom.region}.dynamodb'
+          VpcId: ${self:custom.config.vpc.id}
   - extensions:
       FhirServerLogGroup:
         Properties:
@@ -508,9 +674,12 @@ resources:
       ElasticSearchKibanaUserPoolId:
         Condition: isDev
         Description: User pool id for the provisioning ES Kibana users.
-        Value: !Ref KibanaUserPool
+        Value: !If
+          - kibanaUserPoolExists
+          - ${self:custom.config.kibana.userPoolId}
+          - !Ref KibanaUserPool
       ElasticSearchKibanaUserPoolAppClientId:
-        Condition: isDev
+        Condition: createNewKibanaUserPool
         Description: App client id for the provisioning ES Kibana users.
         Value: !Ref KibanaUserPoolClient
       CloudwatchExecutionLogGroup:
@@ -533,8 +702,18 @@ resources:
           ]
         Export:
           Name: !Join ['-', [CloudwatchExecutionLogGroup, !Ref Stage, Arn]]
+      DynamodbKMSKeyArn:
+        Description: KMS Key for SSE on multitenant DDB tables
+        Value: !GetAtt DynamodbKMSKey.Arn
+      DdbToEsLambdaFunctionArn:
+        Description: ddbToEs function Arn for setting up multitenant ddb streams
+        Value: !GetAtt DdbToEsLambdaFunction.Arn
+      DdbToEsLambdaRoleArn:
+        Description: ddbToEs lambda IAM role arn
+        Value: !GetAtt DdbToEsLambdaRole.Arn
 
 plugins:
   - serverless-step-functions
   - serverless-bundle
   - serverless-offline
+  - serverless-plugin-diff
