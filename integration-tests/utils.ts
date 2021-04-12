@@ -4,7 +4,7 @@
  */
 
 import * as AWS from 'aws-sdk';
-import axios from 'axios';
+import axios, { AxiosInstance } from 'axios';
 import { Chance } from 'chance';
 
 export const getFhirClient = async (
@@ -72,6 +72,15 @@ export const randomPatient = () => {
         id: chance.word({ length: 15 }),
         resourceType: 'Patient',
         active: true,
+        identifier: [
+            {
+                system: 'http://fwoa-integ-tests.com',
+                value: chance.word({ length: 15 }),
+            },
+            {
+                value: chance.word({ length: 15 }),
+            },
+        ],
         name: [
             {
                 use: 'official',
@@ -129,4 +138,50 @@ export const randomPatient = () => {
             reference: `Organization/${chance.word({ length: 15 })}`,
         },
     };
+};
+
+const expectSearchResultsToFulfillExpectation = async (
+    client: AxiosInstance,
+    search: { url: string; params?: any },
+    bundleEntryExpectation: jest.Expect,
+) => {
+    console.log('Searching with params:', search);
+    await expect(
+        (async () => {
+            return (
+                await client.get(search.url, {
+                    params: search.params,
+                })
+            ).data;
+        })(),
+    ).resolves.toMatchObject({
+        resourceType: 'Bundle',
+        entry: bundleEntryExpectation,
+    });
+};
+
+export const expectResourceToBePartOfSearchResults = async (
+    client: AxiosInstance,
+    search: { url: string; params?: any },
+    resource: any,
+) => {
+    const bundleEntryExpectation = expect.arrayContaining([
+        expect.objectContaining({
+            resource,
+        }),
+    ]);
+    await expectSearchResultsToFulfillExpectation(client, search, bundleEntryExpectation);
+};
+
+export const expectResourceToNotBePartOfSearchResults = async (
+    client: AxiosInstance,
+    search: { url: string; params?: any },
+    resource: any,
+) => {
+    const bundleEntryExpectation = expect.not.arrayContaining([
+        expect.objectContaining({
+            resource,
+        }),
+    ]);
+    await expectSearchResultsToFulfillExpectation(client, search, bundleEntryExpectation);
 };
