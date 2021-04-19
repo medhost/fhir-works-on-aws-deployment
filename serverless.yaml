@@ -235,10 +235,10 @@ resources:
       isNotDev: !Not [Condition: isDev]
       isUsingHapiValidator: !Equals [!Ref UseHapiValidator, 'true']
       kibanaUserPoolExists: !Equals [ !Ref UseExistingKibanaUserPool, true ]
-        isVpcEnabled: !Equals [ !Ref IsVpcEnabled, true ]
-        createNewKibanaUserPool: !And
-          - Condition: isDev
-          - !Not [ Condition: kibanaUserPoolExists ]
+      isVpcEnabled: !Equals [ !Ref IsVpcEnabled, true ]
+      createNewKibanaUserPool: !And
+        - Condition: isDev
+        - !Not [ Condition: kibanaUserPoolExists ]
   - Resources:
       ResourceDynamoDBTableV2:
         Type: AWS::DynamoDB::Table
