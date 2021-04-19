@@ -24,13 +24,16 @@ job = Job(glueContext)
 
 args = getResolvedOptions(sys.argv, ['JOB_NAME', 'jobId', 'exportType', 'transactionTime', 'since', 'outputFormat', 'ddbTableName', 'workerType', 'numberWorkers', 's3OutputBucket'])
 
-# type and groupId are optional parameters
+# type, groupId and tenantId are optional parameters
 type = None
 if ('--{}'.format('type') in sys.argv):
     type = getResolvedOptions(sys.argv, ['type'])['type']
 groupId = None
 if ('--{}'.format('groupId') in sys.argv):
     groupId = getResolvedOptions(sys.argv, ['groupId'])['groupId']
+tenantId = None
+if ('--{}'.format('tenantId') in sys.argv):
+    tenantId = getResolvedOptions(sys.argv, ['tenantId'])['tenantId']
 
 job_id = args['jobId']
 export_type = args['exportType']
@@ -42,6 +45,9 @@ worker_type = args['workerType']
 number_workers = args['numberWorkers']
 
 bucket_name = args['s3OutputBucket']
+
+if tenantId:
+    ddb_table_name += "-" + tenantId
 
 # Read data from DDB
 # dynamodb.splits is determined by the formula from the weblink below
