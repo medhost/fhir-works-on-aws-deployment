@@ -570,6 +570,17 @@ resources:
                       - 'states:StartExecution'
                     Resource:
                       - !Ref BulkExportStateMachine
+                  - Effect: Allow
+                    Action: !If
+                      - isVpcEnabled
+                      - - ec2:DescribeInstances
+                        - ec2:CreateNetworkInterface
+                        - ec2:AttachNetworkInterface
+                        - ec2:DescribeNetworkInterfaces
+                        - ec2:DeleteNetworkInterface
+                      - !Ref AWS::NoValue
+                    Resource:
+                      - '*'
                   - !If
                     - isUsingHapiValidator
                     - Effect: Allow
