@@ -370,6 +370,8 @@ resources:
         DeletionPolicy: Retain
         UpdateReplacePolicy: Retain
         Properties:
+          AccelerateConfiguration:
+            AccelerationStatus: Enabled
           LoggingConfiguration:
             DestinationBucketName: !Ref FHIRLogsBucket
             LogFilePrefix: 'binary-acl'
