@@ -6,7 +6,7 @@
 import { RBACConfig } from 'fhir-works-on-aws-authz-rbac';
 
 export const financialResources: string[] = [
-    'Coverage',
+    'CoverageWWWWWW',
     'CoverageEligibilityRequest',
     'CoverageEligibilityResponse',
     'EnrollmentRequest',
